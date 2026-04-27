@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DataTables with Polaris Rendering</title>
+
+    <!-- Shopify Polaris Web Components -->
+    <script type="module" src="https://cdn.shopify.com/shopifycloud/polaris.js"></script>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 24px;
+            background-color: #f1f1f1;
+            font-family: -apple-system, BlinkMacSystemFont, 'San Francisco', 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Hide default DataTables styling */
+        .dataTables_wrapper .dataTables_length,
+        .dataTables_wrapper .dataTables_filter,
+        .dataTables_wrapper .dataTables_info,
+        .dataTables_wrapper .dataTables_paginate,
+        .dataTables_wrapper .dataTables_processing {
+            display: none !important;
+        }
+
+        /* Hide DataTables buttons - we'll use Polaris buttons */
+        .dt-buttons {
+            display: none !important;
+        }
+
+        /* Make DataTables table invisible - we render with s-table */
+        #employeeTable {
+            display: none !important;
+        }
+
+        /* Polaris table container */
+        #polarisTableContainer {
+            display: block;
+        }
+
+        /* Custom search and controls */
+        .polaris-controls {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .polaris-search {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .polaris-pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 16px;
+        }
+
+        .polaris-page-info {
+            font-size: 13px;
+            color: #616161;
+        }
+
+        .polaris-page-buttons {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+
+        /* Polaris pagination button styles */
+        .pagination-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 32px;
+            height: 32px;
+            padding: 0 8px;
+            border: 1px solid #e1e1e1;
+            border-radius: 8px;
+            background-color: #ffffff;
+            color: #303030;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.1s ease;
+        }
+
+        .pagination-button:hover:not(:disabled) {
+            background-color: #f9fafb;
+        }
+
+        .pagination-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination-button.active {
+            background-color: #f4f4f4;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <s-page heading="Employee Directory">
+            <s-section>
+                <!-- Search and Export Controls -->
+                <div class="polaris-controls">
+                    <div class="polaris-search">
+                        <s-text-field id="searchInput" placeholder="Search employees..." />
+                    </div>
+                    <s-button id="exportCsv">Export CSV</s-button>
+                    <s-button id="exportExcel">Export Excel</s-button>
+                    <s-button id="exportPdf">Export PDF</s-button>
+                </div>
+
+                <!-- Hidden DataTables table for data management -->
+                <table id="employeeTable" class="display">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Position</th>
+                            <th>Department</th>
+                            <th>Location</th>
+                            <th>Salary</th>
+                            <th>Start Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td>John Smith</td>
+                            <td>Software Engineer</td>
+                            <td>Engineering</td>
+                            <td>San Francisco</td>
+                            <td>$120,000</td>
+                            <td>2022-01-15</td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td>Sarah Johnson</td>
+                            <td>Product Manager</td>
+                            <td>Product</td>
+                            <td>New York</td>
+                            <td>$135,000</td>
+                            <td>2021-03-22</td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td>Michael Chen</td>
+                            <td>Senior Developer</td>
+                            <td>Engineering</td>
+                            <td>Austin</td>
+                            <td>$145,000</td>
+                            <td>2020-07-10</td>
+                        </tr>
+                        <tr>
+                            <td>4</td>
+                            <td>Emily Davis</td>
+                            <td>UX Designer</td>
+                            <td>Design</td>
+                            <td>Seattle</td>
+                            <td>$110,000</td>
+                            <td>2022-05-01</td>
+                        </tr>
+                        <tr>
+                            <td>5</td>
+                            <td>David Wilson</td>
+                            <td>DevOps Engineer</td>
+                            <td>Engineering</td>
+                            <td>San Francisco</td>
+                            <td>$130,000</td>
+                            <td>2021-11-18</td>
+                        </tr>
+                        <tr>
+                            <td>6</td>
+                            <td>Lisa Anderson</td>
+                            <td>Marketing Manager</td>
+                            <td>Marketing</td>
+                            <td>Chicago</td>
+                            <td>$115,000</td>
+                            <td>2020-02-14</td>
+                        </tr>
+                        <tr>
+                            <td>7</td>
+                            <td>James Taylor</td>
+                            <td>Data Analyst</td>
+                            <td>Analytics</td>
+                            <td>Boston</td>
+                            <td>$95,000</td>
+                            <td>2023-01-09</td>
+                        </tr>
+                        <tr>
+                            <td>8</td>
+                            <td>Maria Garcia</td>
+                            <td>HR Director</td>
+                            <td>Human Resources</td>
+                            <td>New York</td>
+                            <td>$125,000</td>
+                            <td>2019-08-30</td>
+                        </tr>
+                        <tr>
+                            <td>9</td>
+                            <td>Robert Brown</td>
+                            <td>Sales Representative</td>
+                            <td>Sales</td>
+                            <td>Miami</td>
+                            <td>$85,000</td>
+                            <td>2022-09-12</td>
+                        </tr>
+                        <tr>
+                            <td>10</td>
+                            <td>Jennifer Lee</td>
+                            <td>QA Engineer</td>
+                            <td>Engineering</td>
+                            <td>Austin</td>
+                            <td>$105,000</td>
+                            <td>2021-06-25</td>
+                        </tr>
+                        <tr>
+                            <td>11</td>
+                            <td>Thomas Martinez</td>
+                            <td>Tech Lead</td>
+                            <td>Engineering</td>
+                            <td>San Francisco</td>
+                            <td>$165,000</td>
+                            <td>2018-04-03</td>
+                        </tr>
+                        <tr>
+                            <td>12</td>
+                            <td>Amanda White</td>
+                            <td>Content Writer</td>
+                            <td>Marketing</td>
+                            <td>Remote</td>
+                            <td>$75,000</td>
+                            <td>2023-03-15</td>
+                        </tr>
+                        <tr>
+                            <td>13</td>
+                            <td>Christopher Moore</td>
+                            <td>Security Engineer</td>
+                            <td>Engineering</td>
+                            <td>Seattle</td>
+                            <td>$140,000</td>
+                            <td>2020-10-20</td>
+                        </tr>
+                        <tr>
+                            <td>14</td>
+                            <td>Jessica Thompson</td>
+                            <td>Business Analyst</td>
+                            <td>Analytics</td>
+                            <td>Chicago</td>
+                            <td>$100,000</td>
+                            <td>2022-02-28</td>
+                        </tr>
+                        <tr>
+                            <td>15</td>
+                            <td>Daniel Harris</td>
+                            <td>Support Specialist</td>
+                            <td>Customer Support</td>
+                            <td>Remote</td>
+                            <td>$65,000</td>
+                            <td>2023-06-05</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <!-- Polaris Table Rendering -->
+                <div id="polarisTableContainer"></div>
+
+                <!-- Pagination -->
+                <div class="polaris-pagination">
+                    <div class="polaris-page-buttons" id="pageButtons"></div>
+                </div>
+            </s-section>
+        </s-page>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            // Wait for Polaris web components to load
+            setTimeout(function() {
+                initializeTable();
+            }, 500);
+        });
+
+        function initializeTable() {
+            // Initialize DataTables
+            var table = $('#employeeTable').DataTable({
+                pageLength: 10,
+                order: [[0, 'asc']],
+                responsive: true,
+                dom: 'Bfrtip',
+                buttons: ['csv', 'excel', 'pdf'],
+                orderClasses: false,
+                lengthChange: false,
+                info: false,
+                drawCallback: function(settings) {
+                    setTimeout(function() {
+                        renderPolarisTable();
+                        updatePagination();
+                    }, 10);
+                }
+            });
+
+            // Custom render function for Polaris table
+            function renderPolarisTable() {
+                var data = table.rows({page: 'current', search: 'applied'}).data();
+                var headers = ['ID', 'Name', 'Position', 'Department', 'Location', 'Salary', 'Start Date'];
+                var listSlots = ['inline', 'primary', 'inline', 'inline', 'secondary', 'labeled', 'labeled'];
+
+                // Clear container
+                var container = document.getElementById('polarisTableContainer');
+                container.innerHTML = '';
+
+                // Create Polaris table element
+                var sTable = document.createElement('s-table');
+                sTable.setAttribute('variant', 'auto');
+
+                // Header row
+                var headerRow = document.createElement('s-table-header-row');
+                headers.forEach(function(header, i) {
+                    var headerCell = document.createElement('s-table-header');
+                    headerCell.setAttribute('listSlot', listSlots[i]);
+                    if (header === 'Salary') {
+                        headerCell.setAttribute('format', 'numeric');
+                    }
+                    headerCell.textContent = header;
+                    headerRow.appendChild(headerCell);
+                });
+                sTable.appendChild(headerRow);
+
+                // Body
+                var tbody = document.createElement('s-table-body');
+                data.each(function(row) {
+                    var tr = document.createElement('s-table-row');
+                    for (var i = 0; i < row.length; i++) {
+                        var td = document.createElement('s-table-cell');
+                        td.textContent = row[i];
+                        tr.appendChild(td);
+                    }
+                    tbody.appendChild(tr);
+                });
+                sTable.appendChild(tbody);
+
+                container.appendChild(sTable);
+            }
+
+            // Update pagination info and buttons
+            function updatePagination() {
+                var info = table.page.info();
+
+                // Build numbered pagination
+                var pageButtonsContainer = document.getElementById('pageButtons');
+                pageButtonsContainer.innerHTML = '';
+
+                var currentPage = info.page;
+                var totalPages = info.pages;
+
+                // Previous button
+                var prevBtn = document.createElement('button');
+                prevBtn.className = 'pagination-button';
+                prevBtn.type = 'button';
+                prevBtn.setAttribute('aria-label', 'Go to previous page');
+                prevBtn.disabled = currentPage === 0;
+                prevBtn.innerHTML = '<s-icon type="chevron-left" tone="auto"></s-icon>';
+                prevBtn.addEventListener('click', function() {
+                    table.page('previous').draw('page');
+                });
+                pageButtonsContainer.appendChild(prevBtn);
+
+                // Page number buttons (show max 7 buttons)
+                var startPage = Math.max(0, currentPage - 3);
+                var endPage = Math.min(totalPages - 1, currentPage + 3);
+
+                // Adjust if we're near the start or end
+                if (currentPage <= 3) {
+                    endPage = Math.min(6, totalPages - 1);
+                }
+                if (currentPage >= totalPages - 4) {
+                    startPage = Math.max(0, totalPages - 7);
+                }
+
+                for (var i = startPage; i <= endPage; i++) {
+                    (function(pageNum) {
+                        var pageBtn = document.createElement('button');
+                        pageBtn.className = 'pagination-button';
+                        pageBtn.type = 'button';
+                        pageBtn.textContent = (pageNum + 1).toString();
+                        pageBtn.setAttribute('aria-label', 'Go to page ' + (pageNum + 1));
+                        if (pageNum === currentPage) {
+                            pageBtn.classList.add('active');
+                        }
+                        pageBtn.addEventListener('click', function() {
+                            table.page(pageNum).draw('page');
+                        });
+                        pageButtonsContainer.appendChild(pageBtn);
+                    })(i);
+                }
+
+                // Next button
+                var nextBtn = document.createElement('button');
+                nextBtn.className = 'pagination-button';
+                nextBtn.type = 'button';
+                nextBtn.setAttribute('aria-label', 'Go to next page');
+                nextBtn.disabled = currentPage >= totalPages - 1;
+                nextBtn.innerHTML = '<s-icon type="chevron-right" tone="auto"></s-icon>';
+                nextBtn.addEventListener('click', function() {
+                    table.page('next').draw('page');
+                });
+                pageButtonsContainer.appendChild(nextBtn);
+            }
+
+            // Search functionality
+            $('#searchInput').on('input', function() {
+                table.search(this.value).draw();
+            });
+
+            // Export buttons
+            $('#exportCsv').on('click', function() {
+                table.button('.buttons-csv').trigger();
+            });
+
+            $('#exportExcel').on('click', function() {
+                table.button('.buttons-excel').trigger();
+            });
+
+            $('#exportPdf').on('click', function() {
+                table.button('.buttons-pdf').trigger();
+            });
+
+            // Initial render
+            renderPolarisTable();
+            updatePagination();
+        }
+    </script>
+</body>
+</html>
